@@ -696,161 +696,6 @@ export class PgBanksTransactionsRepository
     }
   }
 
-  async findAllUserTransactionsByDocument(
-    document: string,
-    params?: UserTransactionsParams
-  ): Promise<{
-    data: UserTransaction[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    const clientBanks = await this.getClientBanks();
-    const clientAdmin = await this.getClient();
-
-    const page = params?.page && params.page > 0 ? params.page : 1;
-    const limit = params?.limit && params.limit > 0 ? params.limit : 20;
-    const offset = (page - 1) * limit;
-    const sortBy = params?.sortBy ?? "created_at";
-    const sortOrder =
-      params?.sortOrder?.toUpperCase() === "ASC" ? "ASC" : "DESC";
-
-    try {
-      const { rows: walletsRows } = await clientBanks.query<{
-        wallet: string;
-        liquidWallet: string;
-        btcWallet: string;
-      }>(
-        `
-      SELECT wallet, "liquidWallet", "btcWallet"
-      FROM public."aclWallets"
-      WHERE document = $1
-      `,
-        [document]
-      );
-
-      if (!walletsRows.length) {
-        return { data: [], total: 0, page, limit };
-      }
-
-      const baseWallets = [
-        walletsRows[0].wallet,
-        walletsRows[0].liquidWallet,
-        walletsRows[0].btcWallet,
-      ].filter(Boolean);
-
-      const [orderBuyRows, orderSellRows, smartlinkRows] = await Promise.all([
-        clientBanks.query<{ sender: string }>(
-          `SELECT DISTINCT sender FROM public."orderBuy" WHERE sender = ANY($1)`,
-          [baseWallets]
-        ),
-        clientBanks.query<{ wallet: string }>(
-          `SELECT DISTINCT wallet FROM public."orderSell" WHERE wallet = ANY($1)`,
-          [baseWallets]
-        ),
-        clientBanks.query<{ wallet: string }>(
-          `
-        SELECT DISTINCT sl.wallet
-        FROM public.smartlink sl
-        JOIN public."orderSell" os ON os.wallet = sl.wallet
-        WHERE sl.wallet = ANY($1)
-        `,
-          [baseWallets]
-        ),
-      ]);
-
-      const allWallets = new Set<string>([
-        ...baseWallets,
-        ...orderBuyRows.rows.map((r) => r.sender),
-        ...orderSellRows.rows.map((r) => r.wallet),
-        ...smartlinkRows.rows.map((r) => r.wallet),
-      ]);
-
-      const allWalletsArray = Array.from(allWallets);
-
-      if (allWalletsArray.length === 0) {
-        return { data: [], total: 0, page, limit };
-      }
-
-      const walletPatterns = allWalletsArray.map((w) => `%${w.toLowerCase()}%`);
-
-      const filters: string[] = [];
-      const values: any[] = [walletPatterns];
-      let paramIndex = 2;
-
-      if (params?.status) {
-        filters.push(`LOWER(t.status) = LOWER($${paramIndex++})`);
-        values.push(params.status);
-      }
-
-      if (params?.created_after) {
-        filters.push(`t.created_at >= $${paramIndex++}`);
-        values.push(params.created_after);
-      }
-
-      if (params?.created_before) {
-        filters.push(`t.created_at <= $${paramIndex++}`);
-        values.push(params.created_before);
-      }
-
-      if (params?.value) {
-        filters.push(`t.value::numeric >= $${paramIndex++}`);
-        values.push(params.value);
-      }
-
-      if (params?.hash) {
-        filters.push(`t.tx_hash ILIKE $${paramIndex++}`);
-        values.push(`%${params.hash}%`);
-      }
-
-      const queryBase = `
-      FROM public.transactions t
-      JOIN UNNEST($1::text[]) AS p(pattern)
-        ON REPLACE(LOWER(t.from_address), '0x', '') ILIKE REPLACE(p.pattern, '0x', '')
-        OR REPLACE(LOWER(t.to_address), '0x', '') ILIKE REPLACE(p.pattern, '0x', '')
-      WHERE LOWER(t.type) IN ('blockchain', 'bridge')
-      ${filters.length ? `AND ${filters.join(" AND ")}` : ""}
-    `;
-
-      const { rows: countRows } = await clientAdmin.query<{ total: number }>(
-        `SELECT COUNT(*)::int AS total ${queryBase}`,
-        values
-      );
-      const total = countRows[0]?.total ?? 0;
-
-      values.push(limit, offset);
-      const { rows: data } = await clientAdmin.query<UserTransaction>(
-        `
-      SELECT 
-        t.id,
-        t.uuid,
-        t.token_id,
-        t.user_id,
-        t.from_address,
-        t.to_address,
-        t.value,
-        t.fee_value,
-        t.status,
-        t.type,
-        t.tx_hash,
-        t.symbol,
-        t.flow,
-        t.created_at,
-        t.updated_at
-      ${queryBase}
-      ORDER BY t.${sortBy} ${sortOrder}
-      LIMIT $${paramIndex++} OFFSET $${paramIndex}
-      `,
-        values
-      );
-
-      return { data, total, page, limit };
-    } finally {
-      clientBanks.release();
-      clientAdmin.release();
-    }
-  }
-
   async findPixInAll(
     params: Omit<PixInPaginationParams, 'page' | 'limit'>
   ): Promise<PixInTransaction[]> {
@@ -1417,6 +1262,167 @@ export class PgBanksTransactionsRepository
     }
   }
 
+  async findAllUserTransactionsByDocument(
+    document: string,
+    params?: UserTransactionsParams
+  ): Promise<{
+    data: UserTransaction[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const clientBanks = await this.getClientBanks();
+    const clientAdmin = await this.getClient();
+
+    const page = params?.page && params.page > 0 ? params.page : 1;
+    const limit = params?.limit && params.limit > 0 ? params.limit : 20;
+    const offset = (page - 1) * limit;
+    const sortBy = params?.sortBy ?? "created_at";
+    const sortOrder =
+      params?.sortOrder?.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    try {
+      const { rows: walletsRows } = await clientBanks.query<{
+        wallet: string;
+        liquidWallet: string;
+        btcWallet: string;
+      }>(
+        `
+      SELECT wallet, "liquidWallet", "btcWallet"
+      FROM public."aclWallets"
+      WHERE document = $1
+      `,
+        [document]
+      );
+
+      if (!walletsRows.length) {
+        return { data: [], total: 0, page, limit };
+      }
+
+      const baseWallets = [
+        walletsRows[0].wallet,
+        walletsRows[0].liquidWallet,
+        walletsRows[0].btcWallet,
+      ].filter(Boolean);
+
+      const [orderBuyRows, orderSellRows, smartlinkRows] = await Promise.all([
+        clientBanks.query<{ sender: string }>(
+          `SELECT DISTINCT sender FROM public."orderBuy" WHERE sender = ANY($1)`,
+          [baseWallets]
+        ),
+        clientBanks.query<{ wallet: string }>(
+          `SELECT DISTINCT wallet FROM public."orderSell" WHERE wallet = ANY($1)`,
+          [baseWallets]
+        ),
+        clientBanks.query<{ wallet: string }>(
+          `
+          SELECT DISTINCT sl.wallet
+          FROM public.smartlink sl
+          JOIN public."orderSell" os ON os.wallet = sl.wallet
+          WHERE sl.wallet = ANY($1)
+          `,
+          [baseWallets]
+        ),
+      ]);
+
+      const allWallets = new Set<string>([
+        ...baseWallets,
+        ...orderBuyRows.rows.map((r) => r.sender),
+        ...orderSellRows.rows.map((r) => r.wallet),
+        ...smartlinkRows.rows.map((r) => r.wallet),
+      ]);
+
+      const allWalletsArray = Array.from(allWallets);
+
+      if (allWalletsArray.length === 0) {
+        return { data: [], total: 0, page, limit };
+      }
+  const normalizedWallets = allWalletsArray.map((w) =>
+        w.toLowerCase().replace("0x", "")
+      );
+
+      const filters: string[] = [];
+      const values: any[] = [normalizedWallets];
+      let paramIndex = 2;
+
+      if (params?.status) {
+        filters.push(`LOWER(t.status) = LOWER($${paramIndex++})`);
+        values.push(params.status);
+      }
+
+      if (params?.created_after) {
+        filters.push(`t.created_at >= $${paramIndex++}`);
+        values.push(params.created_after);
+      }
+
+      if (params?.created_before) {
+        filters.push(`t.created_at <= $${paramIndex++}`);
+        values.push(params.created_before);
+      }
+
+      if (params?.value) {
+        filters.push(`t.value::numeric >= $${paramIndex++}`);
+        values.push(params.value);
+      }
+
+      if (params?.hash) {
+        filters.push(`t.tx_hash ILIKE $${paramIndex++}`);
+        values.push(`%${params.hash}%`);
+      }
+
+      const queryBase = `
+      FROM public.transactions t
+      WHERE 
+        (
+          REPLACE(LOWER(t.from_address), '0x', '') = ANY($1)
+          OR 
+          REPLACE(LOWER(t.to_address), '0x', '') = ANY($1)
+        )
+        AND LOWER(t.type) IN ('blockchain', 'bridge')
+        ${filters.length ? `AND ${filters.join(" AND ")}` : ""}
+    `;
+
+
+     const { rows: countRows } = await clientAdmin.query<{ total: number }>(
+      `SELECT COUNT(*)::int AS total ${queryBase}`,
+      values
+    );
+
+    const total = countRows[0]?.total ?? 0;
+
+    values.push(limit, offset);
+      const { rows: data } = await clientAdmin.query<UserTransaction>(
+        `
+      SELECT 
+        t.id,
+        t.uuid,
+        t.token_id,
+        t.user_id,
+        t.from_address,
+        t.to_address,
+        t.value,
+        t.fee_value,
+        t.status,
+        t.type,
+        t.tx_hash,
+        t.symbol,
+        t.flow,
+        t.created_at,
+        t.updated_at
+      ${queryBase}
+      ORDER BY t.${sortBy} ${sortOrder}
+      LIMIT $${paramIndex++} OFFSET $${paramIndex}
+      `,
+        values
+      );
+
+      return { data, total, page, limit };
+    } finally {
+      clientBanks.release();
+      clientAdmin.release();
+    }
+  }
+
   async findAllUserTransactionsByDocumentAll(
     document: string,
     params?: Omit<UserTransactionsParams, 'page' | 'limit'>
@@ -1554,5 +1560,4 @@ export class PgBanksTransactionsRepository
       clientAdmin.release();
     }
   }
-  
 }
