@@ -122,8 +122,7 @@ export async function kycRoutes(app: FastifyInstance) {
           labels: z.string(),
         }),
       },
-    },
+    }, //schema
     postResetLabelController
   );
-
 }
