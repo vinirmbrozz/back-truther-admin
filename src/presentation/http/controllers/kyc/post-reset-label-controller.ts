@@ -2,12 +2,12 @@ import { makePostResetLabelUseCase } from "@/application/factories/kyc/make-post
 import { FastifyReply, FastifyRequest } from "fastify";
 
 export async function postResetLabelController(req: FastifyRequest, reply: FastifyReply) {
-  const { uuid, labels } = req.body as any;
+  const { document, labels } = req.body as any;
 
   const useCase = makePostResetLabelUseCase();
 
   const result = await useCase.execute({
-    uuid,
+    document,
     labels,
     externalToken: (req as any).externalToken,
   });

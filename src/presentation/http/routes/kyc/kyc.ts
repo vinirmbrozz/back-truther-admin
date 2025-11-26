@@ -67,7 +67,7 @@ export async function kycRoutes(app: FastifyInstance) {
           decision: z.boolean(),
           internalComent: z.string() || z.null(),
           levelKyc: z.string(),
-          uuid: z.string(),
+          document: z.string(),
         }),
       },
     },
@@ -82,7 +82,7 @@ export async function kycRoutes(app: FastifyInstance) {
         tags: ["KYC"],
         summary: "Proxy: retry-kyc",
         body: z.object({
-          uuid: z.string(),
+          document: z.string(),
           ouccurenceuuid: z.string().optional(),
           internalComent: z.string(),
           tryKycType: z.string(),
@@ -100,7 +100,7 @@ export async function kycRoutes(app: FastifyInstance) {
         tags: ["KYC"],
         summary: "Proxy: disinterest",
         body: z.object({
-          uuid: z.string(),
+          document: z.string(),
           internalComent: z.string(),
           externalComent: z.string().optional(),
           reason: z.string(),
@@ -118,7 +118,7 @@ export async function kycRoutes(app: FastifyInstance) {
         tags: ["KYC"],
         summary: "Proxy: reset-label",
         body: z.object({
-          uuid: z.string(),
+          document: z.string(),
           labels: z.string(),
         }),
       },

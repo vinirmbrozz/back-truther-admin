@@ -2,11 +2,11 @@ import { makePostDecisionKycUseCase } from "@/application/factories/kyc/make-pos
 import { FastifyReply, FastifyRequest } from "fastify";
 
 export async function postDecisionKycController(req: FastifyRequest, reply: FastifyReply) {
-  const { decision, internalComent, levelKyc, uuid } = req.body as {
+  const { decision, internalComent, levelKyc, document } = req.body as {
     decision: boolean;
     internalComent: string | null;
     levelKyc: string;
-    uuid: string;
+    document: string;
   };
 
   const useCase = makePostDecisionKycUseCase();
@@ -15,7 +15,7 @@ export async function postDecisionKycController(req: FastifyRequest, reply: Fast
     decision,
     internalComent,
     levelKyc,
-    uuid,
+    document,
     externalToken: (req as any).externalToken,
   });
 

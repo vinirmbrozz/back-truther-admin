@@ -1,7 +1,7 @@
 import { ExternalKycService } from "@/application/services/kyc/ExternalKycService";
 
 interface Input {
-  uuid: string;
+  document: string;
   internalComent: string;
   externalComent?: string;
   reason: string;
@@ -12,19 +12,26 @@ export class PostDisinterestUseCase {
   constructor(private externalService: ExternalKycService) {}
 
   async execute(input: Input) {
-    const { uuid, internalComent, externalComent, reason, externalToken } = input;
+    const { document, internalComent, externalComent, reason, externalToken } =
+      input;
 
-    const detail = await this.externalService.fetchUserKycData(uuid, externalToken);
+    const listResponse = await this.externalService.listUsers(
+      document,
+      externalToken
+    );
 
-    if (detail.status !== 200 || !detail.data?.res?.data) {
-      return { status: detail.status, data: { error: "USER_NOT_FOUND", details: detail.data } };
+    if (listResponse.status !== 200 || !listResponse.data?.res?.data) {
+      return {
+        status: listResponse.status,
+        data: { error: "USER_NOT_FOUND", details: listResponse.data },
+      };
     }
 
-    const realUuid = detail.data.res.data.id ?? uuid;
+    const uuid = listResponse.data.res.data[0].id;
 
     return this.externalService.fetchDisinterest(
       {
-        uuid: realUuid,
+        uuid: uuid,
         internalComent,
         externalComent,
         reason,

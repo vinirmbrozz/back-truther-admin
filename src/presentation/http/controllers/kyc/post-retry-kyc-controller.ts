@@ -2,12 +2,12 @@ import { makePostRetryKycUseCase } from "@/application/factories/kyc/make-post-r
 import { FastifyReply, FastifyRequest } from "fastify";
 
 export async function postRetryKycController(req: FastifyRequest, reply: FastifyReply) {
-  const { uuid, ouccurenceuuid, internalComent, tryKycType } = req.body as any;
+  const { document, ouccurenceuuid, internalComent, tryKycType } = req.body as any;
 
   const useCase = makePostRetryKycUseCase();
 
   const result = await useCase.execute({
-    uuid,
+    document,
     ouccurenceuuid,
     internalComent,
     tryKycType,

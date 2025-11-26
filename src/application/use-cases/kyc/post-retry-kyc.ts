@@ -1,7 +1,7 @@
 import { ExternalKycService } from "@/application/services/kyc/ExternalKycService";
 
 interface Input {
-  uuid: string;
+  document: string;
   ouccurenceuuid?: string;
   internalComent: string;
   tryKycType: string;
@@ -12,19 +12,22 @@ export class PostRetryKycUseCase {
   constructor(private externalService: ExternalKycService) {}
 
   async execute(input: Input) {
-    const { uuid, ouccurenceuuid, internalComent, tryKycType, externalToken } = input;
+    const { document, ouccurenceuuid, internalComent, tryKycType, externalToken } = input;
 
-    const detail = await this.externalService.fetchUserKycData(uuid, externalToken);
+    const listResponse = await this.externalService.listUsers(document, externalToken);
 
-    if (detail.status !== 200 || !detail.data?.res?.data) {
-      return { status: detail.status, data: { error: "USER_NOT_FOUND", details: detail.data } };
+    if (listResponse.status !== 200 || !listResponse.data?.res?.data) {
+      return {
+        status: listResponse.status,
+        data: { error: "USER_NOT_FOUND", details: listResponse.data },
+      };
     }
 
-    const realUuid = detail.data.res.data.id ?? uuid;
+    const uuid = listResponse.data.res.data[0].id;
 
     return this.externalService.fetchRetryKyc(
       {
-        uuid: realUuid,
+        uuid: uuid,
         ouccurenceuuid,
         internalComent,
         tryKycType,

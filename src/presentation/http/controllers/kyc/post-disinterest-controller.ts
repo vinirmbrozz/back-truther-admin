@@ -2,12 +2,12 @@ import { makePostDisinterestUseCase } from "@/application/factories/kyc/make-pos
 import { FastifyReply, FastifyRequest } from "fastify";
 
 export async function postDisinterestController(req: FastifyRequest, reply: FastifyReply) {
-  const { uuid, internalComent, externalComent, reason } = req.body as any;
+  const { document, internalComent, externalComent, reason } = req.body as any;
 
   const useCase = makePostDisinterestUseCase();
 
   const result = await useCase.execute({
-    uuid,
+    document,
     internalComent,
     externalComent,
     reason,

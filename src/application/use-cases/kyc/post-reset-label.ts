@@ -1,7 +1,7 @@
 import { ExternalKycService } from "@/application/services/kyc/ExternalKycService";
 
 interface Input {
-  uuid: string;
+  document: string;
   labels: string;
   externalToken: string;
 }
@@ -10,19 +10,24 @@ export class PostResetLabelUseCase {
   constructor(private externalService: ExternalKycService) {}
 
   async execute(input: Input) {
-    const { uuid, labels, externalToken } = input;
+    const { document, labels, externalToken } = input;
+    const listResponse = await this.externalService.listUsers(
+      document,
+      externalToken
+    );
 
-    const detail = await this.externalService.fetchUserKycData(uuid, externalToken);
-
-    if (detail.status !== 200 || !detail.data?.res?.data) {
-      return { status: detail.status, data: { error: "USER_NOT_FOUND", details: detail.data } };
+    if (listResponse.status !== 200 || !listResponse.data?.res?.data) {
+      return {
+        status: listResponse.status,
+        data: { error: "USER_NOT_FOUND", details: listResponse.data },
+      };
     }
 
-    const realUuid = detail.data.res.data.id ?? uuid;
+    const uuid = listResponse.data.res.data[0].id;
 
     return this.externalService.fetchResetLabel(
       {
-        uuid: realUuid,
+        uuid: uuid,
         labels,
       },
       externalToken
