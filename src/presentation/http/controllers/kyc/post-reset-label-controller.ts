@@ -1,28 +1,29 @@
-import { makeGetKycDataUserUseCase } from "@/application/factories/kyc/make-get-kyc-data-user";
+import { makePostResetLabelUseCase } from "@/application/factories/kyc/make-post-reset-label";
 import { FastifyReply, FastifyRequest } from "fastify";
 
-export async function getKycDataUserController(req: FastifyRequest, reply: FastifyReply) {
-  const { document } = req.body as { document: string };
+export async function postResetLabelController(req: FastifyRequest, reply: FastifyReply) {
+  const { uuid, labels } = req.body as any;
 
-  const useCase = makeGetKycDataUserUseCase();
+  const useCase = makePostResetLabelUseCase();
 
   const result = await useCase.execute({
-    document,
+    uuid,
+    labels,
     externalToken: (req as any).externalToken,
   });
 
   if (req.audit) {
     await req.audit({
       action: "security",
-      message: "External: Get User Data",
-      description: `Usuário ${req.user?.name} acessou dados de compliance`,
+      message: "External: Reset Label",
+      description: `Usuário ${req.user?.name} realizou Reset Label`,
       method: req.method,
       senderType: "USER",
       senderId: String(req.user?.sub),
       targetType: "ADMIN",
       targetId: "1",
       targetExternalId: "",
-      severity: "medium"
+      severity: "medium",
     });
   }
 
