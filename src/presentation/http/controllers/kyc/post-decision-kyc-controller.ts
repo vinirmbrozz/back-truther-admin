@@ -1,20 +1,28 @@
-import { makeGetKycDataUserUseCase } from "@/application/factories/kyc/make-get-kyc-data-user";
+import { makePostDecisionKycUseCase } from "@/application/factories/kyc/make-post-decision-kyc";
 import { FastifyReply, FastifyRequest } from "fastify";
 
-export async function getKycDataUserController(req: FastifyRequest, reply: FastifyReply) {
-  const { document } = req.body as { document: string };
+export async function postDecisionKycController(req: FastifyRequest, reply: FastifyReply) {
+  const { decision, internalComent, levelKyc, uuid } = req.body as {
+    decision: boolean;
+    internalComent: string | null;
+    levelKyc: string;
+    uuid: string;
+  };
 
-  const useCase = makeGetKycDataUserUseCase();
+  const useCase = makePostDecisionKycUseCase();
 
   const result = await useCase.execute({
-    document,
+    decision,
+    internalComent,
+    levelKyc,
+    uuid,
     externalToken: (req as any).externalToken,
   });
 
   if (req.audit) {
     await req.audit({
       action: "security",
-      message: "External: Get User Data",
+      message: "External: Decision Kyc",
       description: `Usuário ${req.user?.name} acessou dados de compliance`,
       method: req.method,
       senderType: "USER",
@@ -22,7 +30,7 @@ export async function getKycDataUserController(req: FastifyRequest, reply: Fasti
       targetType: "ADMIN",
       targetId: "1",
       targetExternalId: "",
-      severity: "medium"
+      severity: "medium",
     });
   }
 

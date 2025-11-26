@@ -5,6 +5,7 @@ import { externalAuthHook } from "../../middlewares/external-auth";
 import { env } from "@/infra/env";
 import { getKycDataUserController } from "../../controllers/kyc/get-kyc-data-user-controller";
 import z from "zod";
+import { postDecisionKycController } from "../../controllers/kyc/post-decision-kyc-controller";
 
 const proxyBase = env.SERVICE_PROXY_URL || process.env.SERVICE_PROXY_URL;
 
@@ -22,6 +23,24 @@ export async function kycRoutes(app: FastifyInstance) {
       },
     },
     getKycDataUserController
+  );
+
+  app.withTypeProvider<ZodTypeProvider>().post(
+    "/kyc/decision-kyc",
+    {
+      preHandler: [verifyJwt(), externalAuthHook],
+      schema: {
+        tags: ["KYC"],
+        summary: "Proxy: decision-kyc",
+        body: z.object({
+          decision: z.boolean(),
+          internalComent: z.string() || z.null(),
+          levelKyc: z.string(),
+          uuid: z.string(),
+        }),
+      },
+    },
+    postDecisionKycController
   );
 
   app.withTypeProvider<ZodTypeProvider>().get(
