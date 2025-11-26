@@ -106,4 +106,76 @@ export class ExternalKycService {
       };
     }
   }
+
+  async fetchRetryKyc(body: any, token: string) {
+    const invalid = this.validateBaseUrl();
+    if (invalid) return invalid;
+
+    try {
+      const res = await fetch(`${this.baseUrl}/compliance/retry-kyc`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json().catch(() => null);
+      return { status: res.status, data: json };
+    } catch (err: any) {
+      return {
+        status: 500,
+        data: { error: "external_request_failed", details: err?.message },
+      };
+    }
+  }
+
+  async fetchDisinterest(body: any, token: string) {
+    const invalid = this.validateBaseUrl();
+    if (invalid) return invalid;
+
+    try {
+      const res = await fetch(`${this.baseUrl}/compliance/disinterest`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json().catch(() => null);
+      return { status: res.status, data: json };
+    } catch (err: any) {
+      return {
+        status: 500,
+        data: { error: "external_request_failed", details: err?.message },
+      };
+    }
+  }
+
+  async fetchResetLabel(body: any, token: string) {
+    const invalid = this.validateBaseUrl();
+    if (invalid) return invalid;
+
+    try {
+      const res = await fetch(`${this.baseUrl}/compliance/reset-label`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json().catch(() => null);
+      return { status: res.status, data: json };
+    } catch (err: any) {
+      return {
+        status: 500,
+        data: { error: "external_request_failed", details: err?.message },
+      };
+    }
+  }
 }
