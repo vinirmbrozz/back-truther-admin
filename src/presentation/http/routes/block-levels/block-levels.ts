@@ -7,12 +7,12 @@ import { externalAuthHook } from '../../middlewares/external-auth'
 const proxyBase = env.SERVICE_PROXY_URL || process.env.SERVICE_PROXY_URL
 
 export async function servicesRoutes(app: FastifyInstance) {
-  const basePath = '/services'
+  const basePath = '/admin'
 
   app.withTypeProvider<ZodTypeProvider>().get(
     `${basePath}/get-services`,
     {
-      preHandler: [verifyJwt()],
+      preHandler: [verifyJwt(), externalAuthHook],
       schema: { 
         tags: ['Services'],
         summary: 'Proxy to external get-services'
@@ -31,7 +31,7 @@ export async function servicesRoutes(app: FastifyInstance) {
   app.withTypeProvider<ZodTypeProvider>().get(
     `${basePath}/block-levels`,
     {
-      preHandler: [verifyJwt()],
+      preHandler: [verifyJwt(), externalAuthHook],
       schema: { 
         tags: ['Services'], 
         summary: 'Proxy to external block-levels' 
@@ -39,7 +39,7 @@ export async function servicesRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       if (!proxyBase) return reply.status(500).send({ error: 'SERVICE_PROXY_URL not configured' })
-      const res = await fetch(`${proxyBase}/${basePath}/block-levels`, {
+      const res = await fetch(`${proxyBase}/${basePath}/service-block-levels`, {
         headers: { authorization: `Bearer ${(req as any).externalToken}` },
       })
       const json = await res.json().catch(() => null)
@@ -49,9 +49,9 @@ export async function servicesRoutes(app: FastifyInstance) {
   )
 
   app.withTypeProvider<ZodTypeProvider>().put(
-    `${basePath}/block-levels/users/:user_id/tag/:tag`,
+    `${basePath}/service-block-levels/users/:user_id/tag/:tag`,
     {
-      preHandler: [verifyJwt()],
+      preHandler: [verifyJwt(), externalAuthHook],
       schema: { 
         tags: ['Services'], 
         summary: 'Proxy to set user block level (PUT)' },
@@ -59,7 +59,7 @@ export async function servicesRoutes(app: FastifyInstance) {
     async (req, reply) => {
       if (!proxyBase) return reply.status(500).send({ error: 'SERVICE_PROXY_URL not configured' })
       const { user_id, tag } = req.params as any
-      const res = await fetch(`${proxyBase}/${basePath}/block-levels/users/${user_id}/tag/${tag}`, {
+      const res = await fetch(`${proxyBase}/${basePath}/service-block-levels/users/${user_id}/tag/${tag}`, {
         method: 'PUT',
         headers: {
           authorization: (req.headers.authorization as string) || '',
@@ -73,9 +73,9 @@ export async function servicesRoutes(app: FastifyInstance) {
   )
 
   app.withTypeProvider<ZodTypeProvider>().delete(
-    `${basePath}/block-levels/users/:user_id`,
+    `${basePath}/service-block-levels/users/:user_id`,
     {
-      preHandler: [verifyJwt()],
+      preHandler: [verifyJwt(), externalAuthHook],
       schema: { 
         tags: ['Services'], 
         summary: 'Proxy to clear user block level (DELETE)' 
@@ -84,7 +84,7 @@ export async function servicesRoutes(app: FastifyInstance) {
     async (req, reply) => {
       if (!proxyBase) return reply.status(500).send({ error: 'SERVICE_PROXY_URL not configured' })
       const { user_id } = req.params as any
-      const res = await fetch(`${proxyBase}/${basePath}/block-levels/users/${user_id}`, {
+      const res = await fetch(`${proxyBase}/${basePath}/service-block-levels/users/${user_id}`, {
         method: 'DELETE',
         headers: { authorization: `Bearer ${(req as any).externalToken}` },
       })
